@@ -1,64 +1,94 @@
-import { useEffect, useState } from 'react';
-import _ from 'lodash';
+import React, { 
+  useState, 
+  useEffect, 
+  useRef,
+  forwardRef
+} from 'react';
 
-function App() {
-  const [images, setImages] = useState([
-    "1.jpg",
-    "2.png",
-    "3.png",
-    "4.png",
-    "5.png",
-    "6.png",
-    "7.png",
-    "8.png",
-    "9.png"
-  ]);
-  const [randomised, setRandomised] = useState(true);
+const Spinner = forwardRef(({ timer, onFinish }, ref) => {
+  const [position, setPosition] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(timer);
+  const iconHeight = 188;
+  const multiplier = Math.floor(Math.random() * (4 - 1) + 1);
+  const speed = iconHeight * multiplier;
 
-  const handleChange = () => {
-    const intervalId = setInterval(() => {
-      const newImages = _.shuffle(images);
-      if (randomised) {
-        setImages(newImages);
-      }
-    }, 50); // Adjust the interval to your liking (e.g., 50 milliseconds)
+  function setStartPosition() {
+    return Math.floor(Math.random() * 9) * -iconHeight;
+  }
 
-    // Clear the interval after 5 seconds
-    setTimeout(() => {
-      clearInterval(intervalId);
-      setRandomised(false);
-    }, 5000); // Stop after 5 seconds
-  };
+  function moveBackground() {
+    setPosition((prevPosition) => prevPosition - speed);
+    setTimeRemaining((prevTimeRemaining) => prevTimeRemaining - 100);
+  }
+
+  function getSymbolFromPosition() {
+    let currentPosition = setStartPosition();
+    onFinish(currentPosition);
+  }
+
+  function tick() {
+    if (timeRemaining <= 0) {
+      clearInterval(timerInterval);
+      getSymbolFromPosition();
+    } else {
+      moveBackground();
+    }
+  }
 
   useEffect(() => {
-    // Start the animation after 3 seconds
-    const timeoutId = setTimeout(() => {
-      handleChange();
-    }, 3000);
+    const timerInterval = setInterval(() => {
+      tick();
+    }, 5);
 
-    // Clear the timeout if the component unmounts
-    return () => clearTimeout(timeoutId);
-  }, []);
+    return () => clearInterval(timerInterval);
+  }, [timeRemaining]);
+
+  useEffect(() => {
+    setPosition(setStartPosition());
+    setTimeRemaining(timer);
+  }, [timer]);
+
+  React.useImperativeHandle(ref, () => ({
+    forceUpdateHandler: reset,
+  }));
+
+  function reset() {
+    clearInterval(timerInterval);
+    setPosition(setStartPosition());
+    setTimeRemaining(timer);
+
+    timerInterval = setInterval(() => {
+      tick();
+    }, 100);
+  }
+
+  let timerInterval = setInterval(() => {
+    tick();
+  }, 100);
 
   return (
-    <div className="bg-black h-screen">
-      <div className="bg-black w-1/2 mx-auto">
-        <div className="bg-black">
-          <div className="grid grid-cols-3">
-            {images.map((img, index) => (
-              <img
-                key={index}
-                height={200}
-                width={200}
-                src={`/img/${img}`}
-                alt={`img-${index}`}
-              />
-            ))}
-          </div>
-        </div>
+    <div
+      style={{ backgroundPosition: `0px ${position}px` }}
+      className="icons"
+    />
+  );
+});
+
+const App = () => {
+  const first = useRef();
+  const second = useRef();
+  const third = useRef();
+
+  return (
+    <div>
+      <div className={`spinner-container`}>
+        <Spinner onFinish={() => {}} timer="5000" ref={first} />
+        <Spinner onFinish={() => {}} timer="5000" ref={second} />
+        <Spinner onFinish={() => {}} timer="5000" ref={third} />
+        <div className="gradient-fade"></div>
       </div>
     </div>
   );
-}
+};
 
 export default App;
